@@ -16,6 +16,7 @@ from lib import (
     ensure_dir,
     concatenate_audio_chunks
 )
+import spaces
 
 class TTSModel:
     """GPU-accelerated TTS model manager"""
@@ -25,6 +26,7 @@ class TTSModel:
         self.voices_dir = "voices"
         self.model_repo = "hexgrad/Kokoro-82M"
         ensure_dir(self.voices_dir)
+        self.model_path = None
         
         # Load required modules
         py_modules = ["istftnet", "plbert", "models", "kokoro"]
@@ -48,14 +50,14 @@ class TTSModel:
                 self.model_repo,
                 ["kokoro-v0_19.pth", "config.json"]
             )
-            model_path = model_files[0]  # kokoro-v0_19.pth
+            self.model_path = model_files[0]  # kokoro-v0_19.pth
             
-            # Build model directly on GPU
-            with torch.cuda.device(0):
-                torch.cuda.set_device(0)
-                self.model = self.build_model(model_path, 'cuda')
-                self._model_on_gpu = True
-            
+            # Download voice files
+            download_voice_files(self.model_repo, "voices", self.voices_dir)
+
+            # Get list of available voices
+            available_voices = self.list_voices()
+
             print("Model initialization complete")
             return True
             
@@ -66,7 +68,7 @@ class TTSModel:
     def ensure_voice_downloaded(self, voice_name: str) -> bool:
         """Ensure specific voice is downloaded"""
         try:
-            voice_path = os.path.join(self.voices_dir, f"{voice_name}.pt")
+            voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
             if not os.path.exists(voice_path):
                 print(f"Downloading voice {voice_name}.pt...")
                 download_voice_files(self.model_repo, [f"{voice_name}.pt"], self.voices_dir)
@@ -77,43 +79,58 @@ class TTSModel:
 
     def list_voices(self) -> List[str]:
         """List available voices"""
-        return [
-            "af_bella", "af_nicole", "af_sarah", "af_sky", "af",
-            "am_adam", "am_michael", "bf_emma", "bf_isabella",
-            "bm_george", "bm_lewis"
-        ]
+        voices = []
+        voices_subdir = os.path.join(self.voices_dir, "voices")
+        if os.path.exists(voices_subdir):
+            for file in os.listdir(voices_subdir):
+                if file.endswith(".pt"):
+                    voice_name = file[:-3]
+                    voices.append(voice_name)
+        return voices
     
-    def _ensure_model_on_gpu(self) -> None:
-        """Ensure model is on GPU and stays there"""
-        if not hasattr(self, '_model_on_gpu') or not self._model_on_gpu:
-            print("Moving model to GPU...")
-            with torch.cuda.device(0):
-                torch.cuda.set_device(0)
-                if hasattr(self.model, 'to'):
-                    self.model.to('cuda')
-                else:
-                    for name in self.model:
-                        if isinstance(self.model[name], torch.Tensor):
-                            self.model[name] = self.model[name].cuda()
-                self._model_on_gpu = True
+    # def _ensure_model_on_gpu(self) -> None:
+    #     """Ensure model is on GPU and stays there"""
+    #     if not hasattr(self, '_model_on_gpu') or not self._model_on_gpu:
+    #         print("Moving model to GPU...")
+    #         with torch.cuda.device(0):
+    #             torch.cuda.set_device(0)
+    #             if hasattr(self.model, 'to'):
+    #                 self.model.to('cuda')
+    #             else:
+    #                 for name in self.model:
+    #                     if isinstance(self.model[name], torch.Tensor):
+    #                         self.model[name] = self.model[name].cuda()
+    #             self._model_on_gpu = True
     
     def _generate_audio(self, text: str, voicepack: torch.Tensor, lang: str, speed: float) -> np.ndarray:
         """GPU-accelerated audio generation"""
         try:
             with torch.cuda.device(0):
                 torch.cuda.set_device(0)
-                
-                # Move everything to GPU in a single context
-                if not hasattr(self, '_model_on_gpu') or not self._model_on_gpu:
-                    print("Moving model to GPU...")
-                    if hasattr(self.model, 'to'):
-                        self.model.to('cuda')
-                    else:
-                        for name in self.model:
-                            if isinstance(self.model[name], torch.Tensor):
-                                self.model[name] = self.model[name].cuda()
-                    self._model_on_gpu = True
-                
+                try:
+                    # Build model if needed
+                    if self.model is None:
+                        print("Building model...")
+                        device = torch.device('cuda')
+                        self.model = self.build_model(self.model_path, device=device)
+                        if self.model is None:
+                            raise ValueError("Failed to build model")
+                        print("Model built successfully")
+                    
+                    # Move model to GPU if needed
+                    if not hasattr(self.model, '_on_gpu'):
+                        print("Moving model to GPU...")
+                        if hasattr(self.model, 'to'):
+                            self.model = self.model.to('cuda')
+                        else:
+                            for name in self.model:
+                                if isinstance(self.model[name], torch.Tensor):
+                                    self.model[name] = self.model[name].cuda()
+                        self.model._on_gpu = True
+                except Exception as e:
+                    print(f"Error building model: {str(e)}")
+                    print("Attempting to continue")
+                    raise e
                 # Move voicepack to GPU
                 voicepack = voicepack.cuda()
                 
@@ -131,59 +148,73 @@ class TTSModel:
         except Exception as e:
             print(f"Error in audio generation: {str(e)}")
             raise e
-
-    def generate_speech(self, text: str, voice_name: str, speed: float = 1.0, progress_callback=None) -> Tuple[np.ndarray, float]:
+        
+    @spaces.GPU(duration=None)  # Duration will be set by the UI
+    def generate_speech(self, text: str, voice_names: list[str], speed: float = 1.0, gpu_timeout: int = 60, progress_callback=None, progress_state=None, progress=None) -> Tuple[np.ndarray, float]:
         """Generate speech from text. Returns (audio_array, duration)
         
         Args:
             text: Input text to convert to speech
             voice_name: Name of voice to use
             speed: Speech speed multiplier
-            progress_callback: Optional callback function(chunk_num, total_chunks, tokens_per_sec, rtf)
+            progress_callback: Optional callback function(chunk_num, total_chunks, tokens_per_sec, rtf, progress_state, start_time, gpu_timeout, progress)
+            progress_state: Dictionary tracking generation progress metrics
+            progress: Progress callback from Gradio
         """
         try:
-            if not text or not voice_name:
-                raise ValueError("Text and voice name are required")
-            
             start_time = time.time()
-            
-            # Count tokens and normalize text
-            total_tokens = count_tokens(text)
-            text = normalize_text(text)
-            if not text:
-                raise ValueError("Text is empty after normalization")
-            
-            # Load voice and process within GPU context
             with torch.cuda.device(0):
                 torch.cuda.set_device(0)
+                if not text or not voice_names:
+                    raise ValueError("Text and voice name are required")
+                            # Build model directly on GPU
                 
-                voice_path = os.path.join(self.voices_dir, f"{voice_name}.pt")
-                
-                # Ensure voice is downloaded and load directly to GPU
-                if not self.ensure_voice_downloaded(voice_name):
-                    raise ValueError(f"Failed to download voice: {voice_name}")
-                voicepack = torch.load(voice_path, map_location='cuda', weights_only=True)
-                
-                # Break text into chunks for better memory management
-                chunks = chunk_text(text)
-                print(f"Processing {len(chunks)} chunks...")
-                
-                # Ensure model is initialized and on GPU
+                # Build model if needed
                 if self.model is None:
-                    print("Model not initialized, reinitializing...")
-                    if not self.initialize():
-                        raise ValueError("Failed to initialize model")
+                    print("Building model...")
+                    self.model = self.build_model(self.model_path, device='cuda')
+                    if self.model is None:
+                        raise ValueError("Failed to build model")
+                    print("Model built successfully")
                 
                 # Move model to GPU if needed
-                if not hasattr(self, '_model_on_gpu') or not self._model_on_gpu:
+                if not hasattr(self.model, '_on_gpu'):
                     print("Moving model to GPU...")
                     if hasattr(self.model, 'to'):
-                        self.model.to('cuda')
+                        self.model = self.model.to('cuda')
                     else:
                         for name in self.model:
                             if isinstance(self.model[name], torch.Tensor):
                                 self.model[name] = self.model[name].cuda()
-                    self._model_on_gpu = True
+                    self.model._on_gpu = True
+                
+                t_voices = []
+                if isinstance(voice_names, list) and len(voice_names) > 1:
+                    for voice in voice_names:
+                        try:
+                            voice_path = os.path.join(self.voices_dir, "voices", f"{voice}.pt")
+                            voicepack = torch.load(voice_path, weights_only=True)
+                            t_voices.append(voicepack)
+                        except Exception as e:
+                            print(f"Warning: Failed to load voice {voice}: {str(e)}")
+                
+                    # Combine voices by taking mean
+                    voicepack = torch.mean(torch.stack(t_voices), dim=0)
+                    voice_name = "_".join(voice_names)
+                else:
+                    voice_name = voice_names[0]
+                    voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
+                    voicepack = torch.load(voice_path, weights_only=True)
+
+                # Count tokens and normalize text
+                total_tokens = count_tokens(text)
+                text = normalize_text(text)
+                if not text:
+                    raise ValueError("Text is empty after normalization")
+                
+                # Break text into chunks for better memory management
+                chunks = chunk_text(text)
+                print(f"Processing {len(chunks)} chunks...")
                 
                 # Process all chunks within same GPU context
                 audio_chunks = []
@@ -202,11 +233,13 @@ class TTSModel:
                     )
                     chunk_time = time.time() - chunk_start
                     
-                    # Update metrics
+                    # Calculate per-chunk metrics
                     chunk_tokens = count_tokens(chunk)
+                    chunk_tokens_per_sec = chunk_tokens / chunk_time
+                    
+                    # Update totals for overall stats
                     total_processed_tokens += chunk_tokens
                     total_processed_time += chunk_time
-                    current_tokens_per_sec = total_processed_tokens / total_processed_time
                     
                     # Calculate processing speed metrics
                     chunk_duration = len(chunk_audio) / 24000  # audio duration in seconds
@@ -216,7 +249,7 @@ class TTSModel:
                     chunk_times.append(chunk_time)
                     chunk_sizes.append(len(chunk))
                     print(f"Chunk {i+1}/{len(chunks)} processed in {chunk_time:.2f}s")
-                    print(f"Current tokens/sec: {current_tokens_per_sec:.2f}")
+                    print(f"Current tokens/sec: {chunk_tokens_per_sec:.2f}")
                     print(f"Real-time factor: {rtf:.2f}x")
                     print(f"{times_faster:.1f}x faster than real-time")
                     
@@ -224,109 +257,33 @@ class TTSModel:
                     
                     # Call progress callback if provided
                     if progress_callback:
-                        progress_callback(i + 1, len(chunks), current_tokens_per_sec, rtf)
+                        progress_callback(
+                            i + 1,  # chunk_num
+                            len(chunks),  # total_chunks
+                            chunk_tokens_per_sec,  # Pass per-chunk rate instead of cumulative
+                            rtf,
+                            progress_state,  # Added
+                            start_time,  # Added
+                            gpu_timeout,  # Use the timeout value from UI
+                            progress  # Added
+                        )
             
             # Concatenate audio chunks
             audio = concatenate_audio_chunks(audio_chunks)
-            
-            def setup_plot(fig, ax, title):
-                """Configure plot styling"""
-                # Improve grid
-                ax.grid(True, linestyle="--", alpha=0.3, color="#ffffff")
-                
-                # Set title and labels with better fonts and more padding
-                ax.set_title(title, pad=40, fontsize=16, fontweight="bold", color="#ffffff")
-                ax.set_xlabel(ax.get_xlabel(), fontsize=14, fontweight="medium", color="#ffffff")
-                ax.set_ylabel(ax.get_ylabel(), fontsize=14, fontweight="medium", color="#ffffff")
-                
-                # Improve tick labels
-                ax.tick_params(labelsize=12, colors="#ffffff")
-                
-                # Style spines
-                for spine in ax.spines.values():
-                    spine.set_color("#ffffff")
-                    spine.set_alpha(0.3)
-                    spine.set_linewidth(0.5)
-                
-                # Set background colors
-                ax.set_facecolor("#1a1a2e")
-                fig.patch.set_facecolor("#1a1a2e")
-                
-                return fig, ax
-
-            # Set dark style
-            plt.style.use("dark_background")
-            
-            # Create figure with subplots
-            fig = plt.figure(figsize=(18, 16))
-            fig.patch.set_facecolor("#1a1a2e")
-            
-            # Create subplot grid
-            gs = plt.GridSpec(2, 1, left=0.15, right=0.85, top=0.9, bottom=0.15, hspace=0.4)
-            
-            # Processing times plot
-            ax1 = plt.subplot(gs[0])
-            chunks_x = list(range(1, len(chunks) + 1))
-            bars = ax1.bar(chunks_x, chunk_times, color='#ff2a6d', alpha=0.8)
-            
-            # Add statistics lines
-            mean_time = mean(chunk_times)
-            median_time = median(chunk_times)
-            std_time = stdev(chunk_times) if len(chunk_times) > 1 else 0
-            
-            ax1.axhline(y=mean_time, color='#05d9e8', linestyle='--', 
-                       label=f'Mean: {mean_time:.2f}s')
-            ax1.axhline(y=median_time, color='#d1f7ff', linestyle=':', 
-                       label=f'Median: {median_time:.2f}s')
-            
-            # Add ±1 std dev range
-            if len(chunk_times) > 1:
-                ax1.axhspan(mean_time - std_time, mean_time + std_time, 
-                          color='#8c1eff', alpha=0.2, label='±1 Std Dev')
-            
-            # Add value labels on top of bars
-            for bar in bars:
-                height = bar.get_height()
-                ax1.text(bar.get_x() + bar.get_width() / 2.0,
-                        height,
-                        f'{height:.2f}s',
-                        ha='center',
-                        va='bottom',
-                        color='white',
-                        fontsize=10)
-            
-            ax1.set_xlabel('Chunk Number')
-            ax1.set_ylabel('Processing Time (seconds)')
-            setup_plot(fig, ax1, 'Chunk Processing Times')
-            ax1.legend(facecolor="#1a1a2e", edgecolor="#ffffff")
-            
-            # Chunk sizes plot
-            ax2 = plt.subplot(gs[1])
-            ax2.plot(chunks_x, chunk_sizes, color='#ff9e00', marker='o', linewidth=2)
-            ax2.set_xlabel('Chunk Number')
-            ax2.set_ylabel('Chunk Size (chars)')
-            setup_plot(fig, ax2, 'Chunk Sizes')
-            
-            # Save plot
-            plt.savefig('chunk_times.png', format='png')
-            plt.close()
-            
-            # Calculate metrics
-            total_time = time.time() - start_time
-            tokens_per_second = total_tokens / total_time
-            
-            print(f"\nProcessing Metrics:")
-            print(f"Total tokens: {total_tokens}")
-            print(f"Total time: {total_time:.2f}s")
-            print(f"Tokens per second: {tokens_per_second:.2f}")
-            print(f"Mean chunk time: {mean_time:.2f}s")
-            print(f"Median chunk time: {median_time:.2f}s")
-            if len(chunk_times) > 1:
-                print(f"Std dev: {std_time:.2f}s")
-            print(f"\nChunk time plot saved as 'chunk_times.png'")
-            
-            return audio, len(audio) / 24000  # Return audio array and duration
-            
+    
+            # Return audio and metrics
+            return (
+                audio,  # Audio array
+                len(audio) / 24000,  # Duration
+                {
+                    "chunk_times": chunk_times,
+                    "chunk_sizes": chunk_sizes,
+                    "tokens_per_sec": [float(x) for x in progress_state["tokens_per_sec"]],
+                    "rtf": [float(x) for x in progress_state["rtf"]],
+                    "total_tokens": total_tokens,
+                    "total_time": time.time() - start_time
+                }
+            )
         except Exception as e:
             print(f"Error generating speech: {str(e)}")
             raise
