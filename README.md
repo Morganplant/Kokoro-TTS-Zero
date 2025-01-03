@@ -1,13 +1,15 @@
 ---
-title: Kokoro TTS Demo
-emoji: 🎙️
-colorFrom: blue
+title: Kokoro TTS Zero
+emoji: 🎴
+colorFrom: gray
 colorTo: purple
 sdk: gradio
 sdk_version: 5.9.1
 app_file: app.py
-pinned: false
-license: mit
+pinned: true
+short_description: A100 GPU Accelerated Inference applied to Kokoro-82M TTS
+models:
+- hexgrad/Kokoro-82M
 ---
 
 # Kokoro TTS Demo Space
@@ -41,6 +43,5 @@ Main dependencies:
 - HuggingFace Hub ≥0.25.1
 
 For a complete list, see requirements.txt.
-
 
 
