@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tts_model import TTSModel
 from lib import format_audio_output
+from lib.ui_content import header_html, demo_text_info
 
 # Set HF_HOME for faster restarts with cached models/voices
 os.environ["HF_HOME"] = "/data/.huggingface"
@@ -123,26 +124,18 @@ def generate_speech_from_ui(text, voice_name, speed, progress=gr.Progress(track_
         raise gr.Error(f"Generation failed: {str(e)}")
 
 # Create Gradio interface
-with gr.Blocks(title="Kokoro TTS Demo") as demo:
-    gr.HTML(
-        """
-        <div style="display: flex; justify-content: flex-end; padding: 5px; gap: 5px;">
-            <a class="github-button" href="https://github.com/remsky/Kokoro-FastAPI" data-color-scheme="no-preference: light; light: light; dark: dark;" data-size="large" data-show-count="true" aria-label="Star remsky/Kokoro-FastAPI on GitHub">Kokoro-FastAPI Repo</a>
-            <a href="https://huggingface.co/hexgrad/Kokoro-82M" target="_blank">
-                <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-lg-dark.svg" alt="Model on HF">
-            </a>
-        </div>
-        <div style="text-align: center; max-width: 800px; margin: 0 auto;">
-            <h1>Kokoro TTS Demo</h1>
-            <p>Convert text to natural-sounding speech using various voices.</p>
-        </div>
-        <script async defer src="https://buttons.github.io/buttons.js"></script>
-        """
-    )
+with gr.Blocks(title="Kokoro TTS Demo", css="""
+    .equal-height {
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+    }
+""") as demo:
+    gr.HTML(header_html)
     
     with gr.Row():
         # Column 1: Text Input
-        with gr.Column():
+        with gr.Column(elem_classes="equal-height"):
             text_input = gr.TextArea(
                 label="Text to speak",
                 placeholder="Enter text here or upload a .txt file",
@@ -151,7 +144,7 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
             )
         
         # Column 2: Controls
-        with gr.Column():
+        with gr.Column(elem_classes="equal-height"):
             file_input = gr.File(
                 label="Upload .txt file",
                 file_types=[".txt"],
@@ -173,10 +166,15 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
             )
             
             with gr.Group():
+                default_voice = 'af_sky' if 'af_sky' in voice_list \
+                    else voice_list[0] \
+                        if voice_list else \
+                            None
+                        
                 voice_dropdown = gr.Dropdown(
                     label="Voice",
                     choices=voice_list,
-                    value=voice_list[0] if voice_list else None,
+                    value=default_voice,
                     allow_custom_value=True
                 )
                 speed_slider = gr.Slider(
@@ -189,7 +187,7 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
                 submit_btn = gr.Button("Generate Speech", variant="primary")
         
         # Column 3: Output
-        with gr.Column():
+        with gr.Column(elem_classes="equal-height"):
             audio_output = gr.Audio(
                 label="Generated Speech",
                 type="numpy",
@@ -219,10 +217,7 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
     # Add text analysis info
     with gr.Row():
         with gr.Column():
-            gr.Markdown("""
-            ### Demo Text Info
-            The demo text is loaded from H.G. Wells' "The Time Machine". This classic text demonstrates the system's ability to handle long-form content through chunking.
-            """)
+            gr.Markdown(demo_text_info)
 
 # Launch the app
 if __name__ == "__main__":
