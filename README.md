@@ -29,9 +29,6 @@ This Space provides a Gradio interface for the Kokoro TTS model, allowing users 
 - Zero GPU for efficient GPU resource management
 - Dynamically loads required modules from hexgrad/Kokoro-82M repository
 
-## Dependencies
-- hexgrad/Kokoro-82M: Original model repository (core TTS functionality)
-
 All dependencies are automatically handled:
 - Core modules (kokoro.py, models.py, etc.) are downloaded from hexgrad/Kokoro-82M
 - Model weights and voice files are cached in /data/.huggingface
@@ -44,20 +41,7 @@ All dependencies are automatically handled:
 - Gradio 5.9.1
 - A100 Zero GPU Enabled
 
-## Available Voices
 
-af: Default
-af_sky: Classic
-af_bella: Warm
-af_nicole: Soothing
-af_sarah: Polished
-bf_emma: Contemplative
-bf_isabella: Poised
-
-am_adam: Resonant
-am_michael: Sincere
-bm_george: Distinguished
-bm_lewis: Gravelly
 
 ## Notes
 - Model Warm-Up takes some time, it shines at longer lengths. 

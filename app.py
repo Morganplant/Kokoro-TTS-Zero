@@ -92,20 +92,13 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
     # Add voice descriptions
     gr.Markdown("""
     ### Available Voices
-    - Adult Female (af): Base female voice
-        - Bella (af_bella): Warm and friendly
-        - Nicole (af_nicole): Warm and Whispered
-        - Sarah (af_sarah): Soft and gentle
-        - Sky (af_sky): You know her, you love her
-    - Adult Male (am):  Base male voice
-        - Adam (am_adam): Clear and Friendly
-        - Michael (am_michael): Smooth and natural
-    - Young Female (bf):
-        - Emma (bf_emma): Sweet and cheerful
-        - Isabella (bf_isabella): Lively and expressive
-    - Young Male (bm):
-        - George (bm_george): Young and energetic
-        - Lewis (bm_lewis): Deep and confident
+    | af [*default*] | am_adam [*resonant*] |
+    | af_sky [*classic*] | am_michael [*sincere*] |
+    | af_bella [*warm*] | bm_george [*distinguished*] |
+    | af_nicole [*soothing*] | bm_lewis [*gravelly*] |
+    | af_sarah [*polished*] | |
+    | bf_emma [*contemplative*] | |
+    | bf_isabella [*poised*] | |
     """)
     
     # Add text analysis info
