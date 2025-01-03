@@ -1,14 +1,16 @@
 ---
 title: Kokoro TTS Zero
 emoji: 📊
-colorFrom: blue
-colorTo: gray
+colorFrom: gray
+colorTo: purple
 sdk: gradio
 sdk_version: 5.9.1
 app_file: app.py
-pinned: false
+pinned: true
 license: apache-2.0
 short_description: A100 GPU Accelerated Inference applied to Kokoro-82M TTS
+models:
+- hexgrad/Kokoro-82M
 ---
 
 # Kokoro TTS Demo Space
@@ -24,16 +26,10 @@ This Space provides a Gradio interface for the Kokoro TTS model, allowing users 
 
 ## Technical Details
 
-- Uses Zero GPU for efficient GPU resource management
+- Zero GPU for efficient GPU resource management
 - Dynamically loads required modules from hexgrad/Kokoro-82M repository
-- Automatically downloads model and voice files from Hugging Face Hub
-- Implements proper GPU memory handling
-- Includes caching in /data/.huggingface for faster restarts
 
 ## Dependencies
-
-The Space uses modules from two repositories:
-- remsky/Kokoro-FastAPI: This repository (UI and Zero GPU implementation)
 - hexgrad/Kokoro-82M: Original model repository (core TTS functionality)
 
 All dependencies are automatically handled:
@@ -46,27 +42,22 @@ All dependencies are automatically handled:
 - Python 3.10.13
 - PyTorch 2.2.2
 - Gradio 5.9.1
-- Zero GPU compatible
+- A100 Zero GPU Enabled
 
 ## Available Voices
 
-Adult Female voices:
-- af: Confident, Friendly
-- af_sky: You know and Love her
-- af_bella: Warm and Self-Assured
-- af_nicole: Whispered, ASMR
-- af_sarah: Bright and Professional
-- bf_emma: Pensive and Confident, British
-- bf_isabella: Young Professional, British
+af: Default
+af_sky: Classic
+af_bella: Warm
+af_nicole: Soothing
+af_sarah: Polished
+bf_emma: Contemplative
+bf_isabella: Poised
 
-Adult Male voices:
-- am_adam: Deep Narrative Voice
-- am_michael: Trustworthy and Thoughtful
-- bm_george: Distinguished older voice, British
-- bm_lewis: Assured and Raspy, British
+am_adam: Resonant
+am_michael: Sincere
+bm_george: Distinguished
+bm_lewis: Gravelly
 
 ## Notes
-
-- First generation may take longer due to model initialization
-- GPU is allocated only during speech generation
-- Model and voices are cached in /data/.huggingface for faster subsequent runs
+- Model Warm-Up takes some time, it shines at longer lengths. 
