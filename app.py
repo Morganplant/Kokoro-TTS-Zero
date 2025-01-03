@@ -26,7 +26,9 @@ def initialize_model():
     if not voices:
         raise gr.Error("No voices found. Please check the voices directory.")
         
-    return gr.update(choices=voices, value=[voices[0]] if voices else None)
+    default_voice = 'af_sky' if 'af_sky' in voices else voices[0] if voices else None
+    
+    return gr.update(choices=voices, value=default_voice)
 
 def update_progress(chunk_num, total_chunks, tokens_per_sec, rtf, progress_state, start_time, gpu_timeout, progress):
     # Calculate time metrics
