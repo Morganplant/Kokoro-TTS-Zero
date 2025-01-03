@@ -7,7 +7,7 @@ sdk: gradio
 sdk_version: 5.9.1
 app_file: app.py
 pinned: true
-short_description: A100 GPU Accelerated Inference applied to Kokoro-82M TTS
+short_description: A100 GPU Accelerated Inference on Kokoro-82M Text-to-Speech
 models:
 - hexgrad/Kokoro-82M
 ---
@@ -43,5 +43,3 @@ Main dependencies:
 - HuggingFace Hub ≥0.25.1
 
 For a complete list, see requirements.txt.
-
-
