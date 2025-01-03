@@ -1,47 +1,46 @@
 ---
-title: Kokoro TTS Zero
-emoji: 🎴
-colorFrom: gray
+title: Kokoro TTS Demo
+emoji: 🎙️
+colorFrom: blue
 colorTo: purple
 sdk: gradio
 sdk_version: 5.9.1
 app_file: app.py
-pinned: true
-license: apache-2.0
-short_description: A100 GPU Accelerated Inference applied to Kokoro-82M TTS
-models:
-- hexgrad/Kokoro-82M
+pinned: false
+license: mit
 ---
 
 # Kokoro TTS Demo Space
 
 A Zero GPU-optimized Hugging Face Space for the Kokoro TTS model.
-
 ## Overview
 
 This Space provides a Gradio interface for the Kokoro TTS model, allowing users to:
 - Convert text to speech using multiple voices
 - Adjust speech speed
-- Get instant audio playback
+## Project Structure
 
-## Technical Details
+```
+.
+├── app.py              # Main Gradio interface
+├── tts_model.py        # GPU-accelerated TTS model manager
+├── lib/                # Utility modules
+│   ├── __init__.py    # Package exports
+│   ├── text_utils.py  # Text processing utilities
+│   ├── file_utils.py  # File operations
+│   └── audio_utils.py # Audio processing
+└── requirements.txt    # Project dependencies
+```
 
-- Zero GPU for efficient GPU resource management
-- Dynamically loads required modules from hexgrad/Kokoro-82M repository
+## Dependencies
 
-All dependencies are automatically handled:
-- Core modules (kokoro.py, models.py, etc.) are downloaded from hexgrad/Kokoro-82M
-- Model weights and voice files are cached in /data/.huggingface
-- System dependencies (espeak-ng) are installed via packages.txt
-
-## Environment
-
-- Python 3.10.13
+Main dependencies:
 - PyTorch 2.2.2
 - Gradio 5.9.1
-- A100 Zero GPU Enabled
+- Transformers 4.47.1
+- HuggingFace Hub ≥0.25.1
+
+For a complete list, see requirements.txt.
 
 
 
-## Notes
-- Model Warm-Up takes some time, it shines at longer lengths. 
