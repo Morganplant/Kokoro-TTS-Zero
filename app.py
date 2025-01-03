@@ -88,21 +88,14 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
         inputs=[text_input, voice_dropdown, speed_slider],
         outputs=[audio_output, duration_text]
     )
-    
-    # Add voice descriptions
-    gr.Markdown("""
-    ### Available Voices
-    | af [*default*] | am_adam [*resonant*] | af_sky [*classic*] | am_michael [*sincere*] |
-    | af_bella [*warm*] | bm_george [*distinguished*] | af_nicole [*soothing*] | bm_lewis [*gravelly*] |
-    | af_sarah [*polished*] | bf_emma [*contemplative*] | bf_isabella [*poised*] | |
-    """)
+
     
     # Add text analysis info
     with gr.Row():
         with gr.Column():
             gr.Markdown("""
             ### Demo Text Info
-            The demo text is loaded from H.G. Wells' "The Time Machine". This classic text demonstrates the system's ability to handle long-form content through chunking.
+            The preloaded text is from H.G. Wells' "The Time Machine" (Public Domain)
             """)
 
 # Launch the app
