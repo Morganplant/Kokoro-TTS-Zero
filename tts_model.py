@@ -308,7 +308,7 @@ class TTSModel:
             setup_plot(fig, ax2, 'Chunk Sizes')
             
             # Save plot
-            plt.savefig('chunk_times.png')
+            plt.savefig('chunk_times.png', format='png')
             plt.close()
             
             # Calculate metrics

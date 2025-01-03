@@ -2,6 +2,8 @@ import os
 import gradio as gr
 import spaces
 import time
+import matplotlib.pyplot as plt
+import numpy as np
 from tts_model import TTSModel
 from lib import format_audio_output
 
@@ -32,18 +34,27 @@ def generate_speech_from_ui(text, voice_name, speed, progress=gr.Progress(track_
         # Create progress state
         progress_state = {
             "progress": 0.0,
-            "tokens_per_sec": 0.0,
-            "gpu_time_left": gpu_timeout
+            "tokens_per_sec": [],
+            "rtf": [],
+            "chunk_times": [],
+            "gpu_time_left": gpu_timeout,
+            "total_chunks": 0
         }
         
         def update_progress(chunk_num, total_chunks, tokens_per_sec, rtf):
             progress_state["progress"] = chunk_num / total_chunks
-            progress_state["tokens_per_sec"] = tokens_per_sec
+            progress_state["tokens_per_sec"].append(tokens_per_sec)
+            progress_state["rtf"].append(rtf)
             
             # Update GPU time remaining
             elapsed = time.time() - start_time
             gpu_time_left = max(0, gpu_timeout - elapsed)
             progress_state["gpu_time_left"] = gpu_time_left
+            progress_state["total_chunks"] = total_chunks
+            
+            # Track individual chunk processing time
+            chunk_time = elapsed - (sum(progress_state["chunk_times"]) if progress_state["chunk_times"] else 0)
+            progress_state["chunk_times"].append(chunk_time)
             
             # Only update progress display during processing
             progress(progress_state["progress"], desc=f"Processing chunk {chunk_num}/{total_chunks} | GPU Time Left: {int(gpu_time_left)}s")
@@ -62,19 +73,51 @@ def generate_speech_from_ui(text, voice_name, speed, progress=gr.Progress(track_
         # Calculate final metrics
         total_time = time.time() - start_time
         total_duration = len(audio_array) / 24000  # audio duration in seconds
-        final_rtf = total_time / total_duration if total_duration > 0 else 0
+        rtf = total_time / total_duration if total_duration > 0 else 0
+        mean_tokens_per_sec = np.mean(progress_state["tokens_per_sec"])
         
-        # Prepare final metrics display
+        # Create plot of tokens per second with median line
+        fig, ax = plt.subplots(figsize=(10, 5))
+        fig.patch.set_facecolor('black')
+        ax.set_facecolor('black')
+        chunk_nums = list(range(1, len(progress_state["tokens_per_sec"]) + 1))
+        
+        # Plot bars for tokens per second
+        ax.bar(chunk_nums, progress_state["tokens_per_sec"], color='#ff2a6d', alpha=0.8)
+        
+        # Add median line
+        median_tps = np.median(progress_state["tokens_per_sec"])
+        ax.axhline(y=median_tps, color='#05d9e8', linestyle='--', label=f'Median: {median_tps:.1f} tokens/sec')
+        
+        # Style improvements
+        ax.set_xlabel('Chunk Number', fontsize=24, labelpad=20)
+        ax.set_ylabel('Tokens per Second', fontsize=24, labelpad=20)
+        ax.set_title('Processing Speed by Chunk', fontsize=28, pad=30)
+        
+        # Increase tick label size
+        ax.tick_params(axis='both', which='major', labelsize=20)
+        
+        # Remove gridlines
+        ax.grid(False)
+        
+        # Style legend and position it in bottom left
+        ax.legend(fontsize=20, facecolor='black', edgecolor='#05d9e8', loc='lower left')
+        
+        plt.tight_layout()
+        
+        # Prepare final metrics display including audio duration and real-time speed
         metrics_text = (
-            f"Tokens/sec: {progress_state['tokens_per_sec']:.1f}\n" +
-            f"Real-time factor: {final_rtf:.2f}x (Processing Time / Audio Duration)\n" +
-            f"GPU Time Used: {int(total_time)}s of {gpu_timeout}s"
+            f"Median Processing Speed: {np.median(progress_state['tokens_per_sec']):.1f} tokens/sec\n" +
+            f"Real-time Factor: {rtf:.3f}\n" +
+            f"Real Time Generation Speed: {int(1/rtf)}x \n" +
+            f"Processing Time: {int(total_time)}s\n" +
+            f"Output Audio Duration: {total_duration:.2f}s"
         )
         
         return (
             audio_output,
-            metrics_text,
-            duration_text
+            fig,
+            metrics_text
         )
     except Exception as e:
         raise gr.Error(f"Generation failed: {str(e)}")
@@ -83,11 +126,11 @@ def generate_speech_from_ui(text, voice_name, speed, progress=gr.Progress(track_
 with gr.Blocks(title="Kokoro TTS Demo") as demo:
     gr.HTML(
         """
-        <div style="display: flex; justify-content: flex-end; padding: 10px; gap: 10px;">
+        <div style="display: flex; justify-content: flex-end; padding: 5px; gap: 5px;">
+            <a class="github-button" href="https://github.com/remsky/Kokoro-FastAPI" data-color-scheme="no-preference: light; light: light; dark: dark;" data-size="large" data-show-count="true" aria-label="Star remsky/Kokoro-FastAPI on GitHub">Kokoro-FastAPI Repo</a>
             <a href="https://huggingface.co/hexgrad/Kokoro-82M" target="_blank">
-                <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-md-dark.svg" alt="Model on HF">
+                <img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/model-on-hf-lg-dark.svg" alt="Model on HF">
             </a>
-            <a class="github-button" href="https://github.com/remsky/Kokoro-FastAPI" data-color-scheme="no-preference: light; light: light; dark: dark;" data-size="large" data-show-count="true" aria-label="Star remsky/Kokoro-FastAPI on GitHub">Repo for Local Use</a>
         </div>
         <div style="text-align: center; max-width: 800px; margin: 0 auto;">
             <h1>Kokoro TTS Demo</h1>
@@ -155,21 +198,21 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
             )
             progress_bar = gr.Progress(track_tqdm=False)
             metrics_text = gr.Textbox(
-                label="Processing Metrics",
+                label="Performance Summary",
                 interactive=False,
-                lines=3
+                lines=4
             )
-            duration_text = gr.Textbox(
-                label="Processing Info",
-                interactive=False,
-                lines=2
+            metrics_plot = gr.Plot(
+                label="Processing Metrics",
+                show_label=True,
+                format="png"  # Explicitly set format to PNG which is supported by matplotlib
             )
     
     # Set up event handler
     submit_btn.click(
         fn=generate_speech_from_ui,
         inputs=[text_input, voice_dropdown, speed_slider],
-        outputs=[audio_output, metrics_text, duration_text],
+        outputs=[audio_output, metrics_plot, metrics_text],
         show_progress=True
     )
     
@@ -180,7 +223,6 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
             ### Demo Text Info
             The demo text is loaded from H.G. Wells' "The Time Machine". This classic text demonstrates the system's ability to handle long-form content through chunking.
             """)
-        
 
 # Launch the app
 if __name__ == "__main__":
