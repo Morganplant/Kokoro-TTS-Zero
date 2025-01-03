@@ -92,13 +92,9 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
     # Add voice descriptions
     gr.Markdown("""
     ### Available Voices
-    | af [*default*] | am_adam [*resonant*] |
-    | af_sky [*classic*] | am_michael [*sincere*] |
-    | af_bella [*warm*] | bm_george [*distinguished*] |
-    | af_nicole [*soothing*] | bm_lewis [*gravelly*] |
-    | af_sarah [*polished*] | |
-    | bf_emma [*contemplative*] | |
-    | bf_isabella [*poised*] | |
+    | af [*default*] | am_adam [*resonant*] | af_sky [*classic*] | am_michael [*sincere*] |
+    | af_bella [*warm*] | bm_george [*distinguished*] | af_nicole [*soothing*] | bm_lewis [*gravelly*] |
+    | af_sarah [*polished*] | bf_emma [*contemplative*] | bf_isabella [*poised*] | |
     """)
     
     # Add text analysis info
@@ -108,12 +104,6 @@ with gr.Blocks(title="Kokoro TTS Demo") as demo:
             ### Demo Text Info
             The demo text is loaded from H.G. Wells' "The Time Machine". This classic text demonstrates the system's ability to handle long-form content through chunking.
             """)
-            
-            text_stats = gr.Textbox(
-                label="Text Statistics",
-                interactive=False,
-                value=f"Characters: {len(open('the_time_machine_hgwells.txt').read())}\nEstimated chunks: {len(open('the_time_machine_hgwells.txt').read()) // 300 + 1}"
-            )
 
 # Launch the app
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 ---
 title: Kokoro TTS Zero
-emoji: 📊
+emoji: 🎴
 colorFrom: gray
 colorTo: purple
 sdk: gradio
