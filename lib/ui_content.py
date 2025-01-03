@@ -13,7 +13,7 @@ header_html = """
 
     <div style="text-align: center; margin-bottom: 1rem;">
         <h1 style="font-size: 1.75rem; font-weight: bold; color: #ffffff; margin-bottom: 0.5rem;">Kokoro TTS Demo</h1>
-        <p style="color: #d1d5db;">Rapidly onvert text to natural speech using various and blended voices.</p>
+        <p style="color: #d1d5db;">Rapidly convert text to natural speech using various and blended voices.</p>
     </div>
         
     <div style="display: flex; gap: 1rem;">
