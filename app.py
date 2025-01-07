@@ -279,11 +279,11 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
             
             def update_chapters(book_name):
                 if not book_name:
-                    return gr.update(choices=[], value=None), "", '<div class="token-label">Text to speak</div>'
+                    return gr.update(choices=[], value=None), "", '<div class="token-label"></div>'
                 # Find the corresponding book file
                 book_file = next((book['value'] for book in books if book['label'] == book_name), None)
                 if not book_file:
-                    return gr.update(choices=[], value=None), "", '<div class="token-label">Text to speak</div>'
+                    return gr.update(choices=[], value=None), "", '<div class="token-label"></div>'
                 book_path = os.path.join("texts/processed", book_file)
                 book_title, chapters = get_book_info(book_path)
                 # Create simple choices list of chapter titles
@@ -293,18 +293,18 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                 if initial_text:
                     tokens = count_tokens(initial_text)
                     time_estimate = math.ceil(tokens / 150 / 10) * 10
-                    label = f'<div class="token-label">Text to speak <span class="token-count">({tokens} tokens, ~{time_estimate}s generation time)</span></div>'
+                    label = f'<div class="token-label"><span class="token-count">({tokens} tokens, ~{time_estimate}s generation time)</span></div>'
                 else:
-                    label = '<div class="token-label">Text to speak</div>'
+                    label = '<div class="token-label"></div>'
                 return gr.update(choices=chapter_choices, value=chapter_choices[0] if chapter_choices else None), initial_text, label
             
             def load_chapter_text(book_name, chapter_title):
                 if not book_name or not chapter_title:
-                    return "", '<div class="token-label">Text to speak</div>'
+                    return "", '<div class="token-label"></div>'
                 # Find the corresponding book file
                 book_file = next((book['value'] for book in books if book['label'] == book_name), None)
                 if not book_file:
-                    return "", '<div class="token-label">Text to speak</div>'
+                    return "", '<div class="token-label"></div>'
                 book_path = os.path.join("texts/processed", book_file)
                 # Get all chapters and find the one matching the title
                 _, chapters = get_book_info(book_path)
@@ -313,8 +313,8 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                         text = get_chapter_text(book_path, ch['id'])
                         tokens = count_tokens(text)
                         time_estimate = math.ceil(tokens / 150 / 10) * 10
-                        return text, f'<div class="token-label">Text to speak <span class="token-count">({tokens} tokens, ~{time_estimate}s generation time)</span></div>'
-                return "", '<div class="token-label">Text to speak</div>'
+                        return text, f'<div class="token-label"> <span class="token-count">({tokens} tokens, ~{time_estimate}s generation time)</span></div>'
+                return "", '<div class="token-label"></div>'
             
             # Set up event handlers for book/chapter selection
             book_dropdown.change(
@@ -339,12 +339,12 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
             
             def load_text_from_file(file_bytes):
                 if file_bytes is None:
-                    return None, '<div class="token-label">Text to speak</div>'
+                    return None, '<div class="token-label"></div>'
                 try:
                     text = file_bytes.decode('utf-8')
                     tokens = count_tokens(text)
                     time_estimate = math.ceil(tokens / 150 / 10) * 10  # Round up to nearest 10 seconds
-                    return text, f'<div class="token-label">Text to speak <span class="token-count">({tokens} tokens, ~{time_estimate}s generation time)</span></div>'
+                    return text, f'<div class="token-label"><span class="token-count">({tokens} tokens, ~{time_estimate}s generation time)</span></div>'
                 except Exception as e:
                     raise gr.Error(f"Failed to read file: {str(e)}")
 
