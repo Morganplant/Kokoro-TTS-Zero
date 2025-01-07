@@ -234,19 +234,19 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                     tokens = count_tokens(initial_text)
                     time_estimate = math.ceil(tokens / lab_tps)
                     output_estimate = (time_estimate * lab_rts)//60
-                    initial_label = f'<div class="token-label">Text to speak <span class="token-count">Estimated {output_estimate} minutes in ~{time_estimate}s</span></div>'
+                    initial_label = f'<div class="token-label"><span class="token-count">Estimated {output_estimate} minutes in ~{time_estimate}s</span></div>'
                 else:
-                    initial_label = '<div class="token-label">Text to speak</div>'
+                    initial_label = '<div class="token-label"></div>'
             else:
-                initial_label = '<div class="token-label">Text to speak</div>'
+                initial_label = '<div class="token-label"></div>'
             
             def update_text_label(text):
                 if not text:
-                    return '<div class="token-label">Text to speak</div>'
+                    return '<div class="token-label"></div>'
                 tokens = count_tokens(text)
                 time_estimate = math.ceil(tokens / lab_tps)
                 output_estimate = (time_estimate * lab_rts)//60 
-                return  f'<div class="token-label">Text to speak <span class="token-count">Estimated {output_estimate} minutes in ~{time_estimate}s</span></div>'
+                return  f'<div class="token-label"><span class="token-count">Estimated {output_estimate} minutes in ~{time_estimate}s</span></div>'
 
             
             text_input = gr.TextArea(
@@ -262,7 +262,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
             label_html = gr.HTML(initial_label)
             
             def clear_text():
-                return "", '<div class="token-label">Text to speak</div>'
+                return "", '<div class="token-label"></div>'
             
             clear_btn.click(
                 fn=clear_text,
