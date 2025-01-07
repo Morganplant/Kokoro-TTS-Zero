@@ -257,8 +257,6 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                 show_label=False,
                 show_copy_button=True  # Add copy button for convenience
             )
-            clear_btn = gr.Button("Clear Text", variant="secondary")
-            
             label_html = gr.HTML(initial_label)
             # Update label whenever text changes
             text_input.change(
@@ -268,6 +266,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                 trigger_mode="always_last"
             )
 
+            clear_btn = gr.Button("Clear Text", variant="secondary")
             
             def clear_text():
                 return "", '<div class="token-label">Text to speak</div>'
