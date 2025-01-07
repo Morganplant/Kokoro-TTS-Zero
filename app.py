@@ -185,7 +185,9 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
     }
     .token-label {
         font-size: 1rem;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.3rem;
+        text-align: center;
+        padding: 0.2rem 0;
     }
     .token-count {
         color: #4169e1;
@@ -254,7 +256,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                 placeholder="Enter text here, select a chapter, or upload a .txt file",
                 value=initial_text,
                 lines=8,
-                max_lines=16,
+                max_lines=14,
                 show_label=False,
                 show_copy_button=True  # Add copy button for convenience
             )
