@@ -190,13 +190,6 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
     .token-count {
         color: #4169e1;
     }
-    .centered-label {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        margin: 10px 0;
-    }
 """) as demo:
     gr.HTML(header_html)
     
@@ -264,17 +257,17 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                 show_label=False,
                 show_copy_button=True  # Add copy button for convenience
             )
-            with gr.Row(equal_height=True):
-                with gr.Column():
-                    label_html = gr.HTML(initial_label, elem_classes="centered-label")
-                    # Update label whenever text changes
-                    text_input.change(
-                        fn=update_text_label,
-                        inputs=[text_input],
-                        outputs=[label_html],
-                        trigger_mode="always_last"
-                    )
             clear_btn = gr.Button("Clear Text", variant="secondary")
+            
+            label_html = gr.HTML(initial_label)
+            # Update label whenever text changes
+            text_input.change(
+                fn=update_text_label,
+                inputs=[text_input],
+                outputs=[label_html],
+                trigger_mode="always_last"
+            )
+
             
             def clear_text():
                 return "", '<div class="token-label">Text to speak</div>'

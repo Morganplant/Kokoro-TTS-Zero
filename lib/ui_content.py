@@ -44,6 +44,5 @@ header_html = f"""
 
 # Markdown content for demo text info
 demo_text_info = """
-### Demo Text Info
-The demo text is loaded from H.G. Wells' "The Time Machine". This classic text demonstrates the system's ability to handle long-form content through chunking.
+All input text is waas sourced as public domain.
 """
