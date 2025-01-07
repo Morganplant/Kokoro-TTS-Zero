@@ -254,6 +254,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                 placeholder="Enter text here, select a chapter, or upload a .txt file",
                 value=initial_text,
                 lines=8,
+                max_lines=16,
                 show_label=False,
                 show_copy_button=True  # Add copy button for convenience
             )

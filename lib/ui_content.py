@@ -1,7 +1,7 @@
 # HTML content for the header section
 
 header_title = """
-Generates about 1 hour of audio per minute, with unexpected quality
+Generate about an hour of audio per minute on the Kokoro-82M TTS model, with unexpected quality
 """.strip()
 
 time_button = """
