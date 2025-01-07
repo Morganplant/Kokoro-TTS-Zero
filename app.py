@@ -1,19 +1,31 @@
 import os
 import gradio as gr
-import spaces
 import time
+import math
+import logging
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
-import os
-from tts_model import TTSModel
+# from lib.mock_tts import MockTTSModel
 from lib import format_audio_output
 from lib.ui_content import header_html, demo_text_info
+from lib.book_utils import get_available_books, get_book_info, get_chapter_text
+from lib.text_utils import count_tokens
+from tts_model import TTSModel
 
 # Set HF_HOME for faster restarts with cached models/voices
 os.environ["HF_HOME"] = "/data/.huggingface"
 
 # Create TTS model instance
+model = TTSModel()
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+# Suppress matplotlib debug messages
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
+logger = logging.getLogger(__name__)
+logger.debug("Starting app initialization...")
+
+
 model = TTSModel()
 
 def initialize_model():
@@ -163,6 +175,7 @@ def create_performance_plot(metrics, voice_names):
     
     return fig, metrics_text
 
+
 # Create Gradio interface
 with gr.Blocks(title="Kokoro TTS Demo", css="""
     .equal-height {
@@ -170,20 +183,157 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
         display: flex;
         flex-direction: column;
     }
+    .token-label {
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+    .token-count {
+        color: #4169e1;
+    }
+    .centered-label {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        margin: 10px 0;
+    }
 """) as demo:
     gr.HTML(header_html)
     
     with gr.Row():
-        # Column 1: Text Input
-        with open("the_time_machine_hgwells.txt") as f:
-            text = f.readlines()[:200]
-            text = "".join(text)
+        # Column 1: Text Input and Book Selection
         with gr.Column(elem_classes="equal-height"):
+            # Book selection
+            books = get_available_books()
+            book_dropdown = gr.Dropdown(
+                label="Select Book",
+                choices=[book['label'] for book in books],
+                value=books[0]['label'] if books else None,
+                type="value",
+                allow_custom_value=True
+            )
+            
+            # Initialize chapters for first book
+            initial_book = books[0]['value'] if books else None
+            initial_chapters = []
+            if initial_book:
+                book_path = os.path.join("texts/processed", initial_book)
+                _, chapters = get_book_info(book_path)
+                initial_chapters = [ch['title'] for ch in chapters]
+            
+            # Chapter selection with initial chapters
+            chapter_dropdown = gr.Dropdown(
+                label="Select Chapter",
+                choices=initial_chapters,
+                value=initial_chapters[0] if initial_chapters else None,
+                type="value",
+                allow_custom_value=True
+            )
+            lab_tps = 175
+            lab_rts = 50
+            # Text input area with initial chapter text
+            initial_text = ""
+            if initial_chapters and initial_book:
+                book_path = os.path.join("texts/processed", initial_book)
+                _, chapters = get_book_info(book_path)
+                if chapters:
+                    initial_text = get_chapter_text(book_path, chapters[0]['id'])
+                    tokens = count_tokens(initial_text)
+                    time_estimate = math.ceil(tokens / lab_tps)
+                    output_estimate = (time_estimate * lab_rts)//60
+                    initial_label = f'<div class="token-label">Text to speak <span class="token-count">Estimated {output_estimate} minutes in ~{time_estimate}s</span></div>'
+                else:
+                    initial_label = '<div class="token-label">Text to speak</div>'
+            else:
+                initial_label = '<div class="token-label">Text to speak</div>'
+            
+            def update_text_label(text):
+                if not text:
+                    return '<div class="token-label">Text to speak</div>'
+                tokens = count_tokens(text)
+                time_estimate = math.ceil(tokens / lab_tps)
+                output_estimate = (time_estimate * lab_rts)//60 
+                return  f'<div class="token-label">Text to speak <span class="token-count">Estimated {output_estimate} minutes in ~{time_estimate}s</span></div>'
+
+            
             text_input = gr.TextArea(
-                label="Text to speak",
-                placeholder="Enter text here or upload a .txt file",
+                label=None,
+                placeholder="Enter text here, select a chapter, or upload a .txt file",
+                value=initial_text,
                 lines=10,
-                value=text
+                show_label=False,
+                show_copy_button=True  # Add copy button for convenience
+            )
+            with gr.Row(equal_height=True):
+                with gr.Column():
+                    label_html = gr.HTML(initial_label, elem_classes="centered-label")
+                    # Update label whenever text changes
+                    text_input.change(
+                        fn=update_text_label,
+                        inputs=[text_input],
+                        outputs=[label_html],
+                        trigger_mode="always_last"
+                    )
+            clear_btn = gr.Button("Clear Text", variant="secondary")
+            
+            def clear_text():
+                return "", '<div class="token-label">Text to speak</div>'
+            
+            clear_btn.click(
+                fn=clear_text,
+                outputs=[text_input, label_html]
+            )
+            
+            def update_chapters(book_name):
+                if not book_name:
+                    return gr.update(choices=[], value=None), "", '<div class="token-label">Text to speak</div>'
+                # Find the corresponding book file
+                book_file = next((book['value'] for book in books if book['label'] == book_name), None)
+                if not book_file:
+                    return gr.update(choices=[], value=None), "", '<div class="token-label">Text to speak</div>'
+                book_path = os.path.join("texts/processed", book_file)
+                book_title, chapters = get_book_info(book_path)
+                # Create simple choices list of chapter titles
+                chapter_choices = [ch['title'] for ch in chapters]
+                # Set initial chapter text when book is selected
+                initial_text = get_chapter_text(book_path, chapters[0]['id']) if chapters else ""
+                if initial_text:
+                    tokens = count_tokens(initial_text)
+                    time_estimate = math.ceil(tokens / 150 / 10) * 10
+                    label = f'<div class="token-label">Text to speak <span class="token-count">({tokens} tokens, ~{time_estimate}s generation time)</span></div>'
+                else:
+                    label = '<div class="token-label">Text to speak</div>'
+                return gr.update(choices=chapter_choices, value=chapter_choices[0] if chapter_choices else None), initial_text, label
+            
+            def load_chapter_text(book_name, chapter_title):
+                if not book_name or not chapter_title:
+                    return "", '<div class="token-label">Text to speak</div>'
+                # Find the corresponding book file
+                book_file = next((book['value'] for book in books if book['label'] == book_name), None)
+                if not book_file:
+                    return "", '<div class="token-label">Text to speak</div>'
+                book_path = os.path.join("texts/processed", book_file)
+                # Get all chapters and find the one matching the title
+                _, chapters = get_book_info(book_path)
+                for ch in chapters:
+                    if ch['title'] == chapter_title:
+                        text = get_chapter_text(book_path, ch['id'])
+                        tokens = count_tokens(text)
+                        time_estimate = math.ceil(tokens / 150 / 10) * 10
+                        return text, f'<div class="token-label">Text to speak <span class="token-count">({tokens} tokens, ~{time_estimate}s generation time)</span></div>'
+                return "", '<div class="token-label">Text to speak</div>'
+            
+            # Set up event handlers for book/chapter selection
+            book_dropdown.change(
+                fn=update_chapters,
+                inputs=[book_dropdown],
+                outputs=[chapter_dropdown, text_input, label_html]
+            )
+            
+            chapter_dropdown.change(
+                fn=load_chapter_text,
+                inputs=[book_dropdown, chapter_dropdown],
+                outputs=[text_input, label_html]
             )
         
         # Column 2: Controls
@@ -196,16 +346,19 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
             
             def load_text_from_file(file_bytes):
                 if file_bytes is None:
-                    return None
+                    return None, '<div class="token-label">Text to speak</div>'
                 try:
-                    return file_bytes.decode('utf-8')
+                    text = file_bytes.decode('utf-8')
+                    tokens = count_tokens(text)
+                    time_estimate = math.ceil(tokens / 150 / 10) * 10  # Round up to nearest 10 seconds
+                    return text, f'<div class="token-label">Text to speak <span class="token-count">({tokens} tokens, ~{time_estimate}s generation time)</span></div>'
                 except Exception as e:
                     raise gr.Error(f"Failed to read file: {str(e)}")
 
             file_input.change(
                 fn=load_text_from_file,
                 inputs=[file_input],
-                outputs=[text_input]
+                outputs=[text_input, label_html]
             )
             
             with gr.Group():
@@ -231,7 +384,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                     label="GPU Timeout (seconds)",
                     minimum=15,
                     maximum=120,
-                    value=60,
+                    value=90,
                     step=1,
                     info="Maximum time allowed for GPU processing"
                 )
