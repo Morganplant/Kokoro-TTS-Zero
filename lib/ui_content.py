@@ -44,5 +44,5 @@ header_html = f"""
 
 # Markdown content for demo text info
 demo_text_info = """
-All input text is waas sourced as public domain.
+All input text was sourced as public domain.
 """

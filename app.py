@@ -253,20 +253,13 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
                 label=None,
                 placeholder="Enter text here, select a chapter, or upload a .txt file",
                 value=initial_text,
-                lines=10,
+                lines=8,
                 show_label=False,
                 show_copy_button=True  # Add copy button for convenience
             )
-            label_html = gr.HTML(initial_label)
-            # Update label whenever text changes
-            text_input.change(
-                fn=update_text_label,
-                inputs=[text_input],
-                outputs=[label_html],
-                trigger_mode="always_last"
-            )
-
+            
             clear_btn = gr.Button("Clear Text", variant="secondary")
+            label_html = gr.HTML(initial_label)
             
             def clear_text():
                 return "", '<div class="token-label">Text to speak</div>'
@@ -274,6 +267,14 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
             clear_btn.click(
                 fn=clear_text,
                 outputs=[text_input, label_html]
+            )
+            
+            # Update label whenever text changes
+            text_input.change(
+                fn=update_text_label,
+                inputs=[text_input],
+                outputs=[label_html],
+                trigger_mode="always_last"
             )
             
             def update_chapters(book_name):
