@@ -46,3 +46,27 @@ header_html = f"""
 demo_text_info = """
 All input text was sourced as public domain.
 """
+
+styling = """
+    .equal-height {
+        min-height: 400px;
+        display: flex;
+        flex-direction: column;
+    }
+    .token-label {
+        font-size: 1rem;
+        margin-bottom: 0.3rem;
+        text-align: center;
+        padding: 0.2rem 0;
+    }
+    .token-count {
+        color: #4169e1;
+    }
+    #gradio-accordion > .label-wrap {
+        background: radial-gradient(circle, rgba(147,51,234,0.4) 0%, rgba(30,58,138,0.4) 100%);
+        padding: 0.8rem 1rem;
+        font-size: 1rem;
+        color: #000000;
+        border-radius: 4px;
+    }
+"""

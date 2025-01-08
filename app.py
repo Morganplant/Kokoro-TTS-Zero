@@ -6,7 +6,7 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from lib import format_audio_output
-from lib.ui_content import header_html, demo_text_info
+from lib.ui_content import header_html, demo_text_info, styling
 from lib.book_utils import get_available_books, get_book_info, get_chapter_text
 from lib.text_utils import count_tokens
 from tts_model import TTSModel
@@ -179,28 +179,7 @@ def create_performance_plot(metrics, voice_names):
     return fig, metrics_text
 
 # Create Gradio interface
-with gr.Blocks(title="Kokoro TTS Demo", css="""
-    .equal-height {
-        min-height: 400px;
-        display: flex;
-        flex-direction: column;
-    }
-    .token-label {
-        font-size: 1rem;
-        margin-bottom: 0.3rem;
-        text-align: center;
-        padding: 0.2rem 0;
-    }
-    .token-count {
-        color: #4169e1;
-    }
-    #gradio-accordion > .label-wrap {
-        background: radial-gradient(circle, rgba(147,51,234,0.4) 0%, rgba(30,58,138,0.4) 100%);
-        padding: 0.8rem 1rem;
-        font-weight: 500;
-        color: #000000;
-    }
-""") as demo:
+with gr.Blocks(title="Kokoro TTS Demo", css=styling) as demo:
     gr.HTML(header_html)
     
     with gr.Row():
@@ -350,6 +329,34 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
         
         # Column 2: Controls
         with gr.Column(elem_classes="equal-height"):
+            # Audio Samples Accordion with custom styling
+            with gr.Accordion("Audio Samples", open=False, elem_id='gradio-accordion') as audio_accordion:
+                sample_files = [f for f in os.listdir("samples") if f.endswith('.wav')]
+                sample_audio = gr.Audio(
+                    value=os.path.join("samples", sample_files[0]) if sample_files else None,
+                    sources=["upload"],
+                    type="filepath",
+                    label="Sample Audio",
+                    interactive=False
+                )
+                sample_dropdown = gr.Dropdown(
+                    choices=sample_files,
+                    value=sample_files[0] if sample_files else None,
+                    label="Select Sample",
+                    type="value"
+                )
+                
+                def update_sample(sample_name):
+                    if not sample_name:
+                        return None
+                    return os.path.join("samples", sample_name)
+                
+                sample_dropdown.change(
+                    fn=update_sample,
+                    inputs=[sample_dropdown],
+                    outputs=[sample_audio]
+                )
+                
             file_input = gr.File(
                 label="Upload .txt file",
                 file_types=[".txt"],
@@ -393,34 +400,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
 
                 submit_btn = gr.Button("Generate Speech", variant="primary")
 
-                # Audio Samples Accordion with custom styling
-                with gr.Accordion("Audio Samples", open=False, elem_id='gradio-accordion') as audio_accordion:
-                    sample_files = [f for f in os.listdir("samples") if f.endswith('.wav')]
-                    sample_audio = gr.Audio(
-                        value=os.path.join("samples", sample_files[0]) if sample_files else None,
-                        sources=["upload"],
-                        type="filepath",
-                        label="Sample Audio",
-                        interactive=False
-                    )
-                    sample_dropdown = gr.Dropdown(
-                        choices=sample_files,
-                        value=sample_files[0] if sample_files else None,
-                        label="Select Sample",
-                        type="value"
-                    )
-                    
-                    def update_sample(sample_name):
-                        if not sample_name:
-                            return None
-                        return os.path.join("samples", sample_name)
-                    
-                    sample_dropdown.change(
-                        fn=update_sample,
-                        inputs=[sample_dropdown],
-                        outputs=[sample_audio]
-                    )
-                    
+
             
         
         # Column 3: Output
