@@ -195,7 +195,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css="""
         color: #4169e1;
     }
     #gradio-accordion > .label-wrap {
-        background: radial-gradient(circle, rgba(7,57,153,0.2) 6%, rgba(2,0,36,0.05) 37%, rgba(9,9,121,0.15) 73%, rgba(0,212,255,0.15) 225%);
+        background: radial-gradient(circle, rgba(147,51,234,0.4) 0%, rgba(30,58,138,0.4) 100%);
         padding: 0.8rem 1rem;
         font-weight: 500;
         color: #000000;
