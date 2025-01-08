@@ -7,7 +7,7 @@ sdk: gradio
 sdk_version: 5.10.0
 app_file: app.py
 pinned: true
-short_description: An hour per minute Text-To-Speech on Kokoro-82M
+short_description: Accelerated Text-To-Speech on Kokoro-82M
 models:
 - hexgrad/Kokoro-82M
 ---
