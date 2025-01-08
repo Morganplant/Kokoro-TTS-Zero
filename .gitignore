@@ -1,3 +1,16 @@
 dorian_grey.txt
 texts/time_machine.txt
 *.pyc
+*.pt
+
+# Audio files
+
+# Binary files
+*.bin
+*.pth
+*.ckpt
+*.model
+
+# Cache directories
+__pycache__/
+.cache/
