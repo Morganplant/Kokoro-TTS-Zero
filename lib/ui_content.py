@@ -63,7 +63,7 @@ styling = """
         color: #4169e1;
     }
     #gradio-accordion > .label-wrap {
-        background: radial-gradient(circle, rgba(147,51,234,0.6) 0%, rgba(30,58,138,0.6) 100%);
+        background: radial-gradient(circle, rgba(167,71,254,0.8) 0%, rgba(30,58,138,0.6) 100%);
         padding: 0.8rem 1rem;
         font-size: 1rem;
         color: #000000;
