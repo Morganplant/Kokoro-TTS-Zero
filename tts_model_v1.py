@@ -6,6 +6,7 @@ from typing import Tuple, List
 import soundfile as sf
 from kokoro import KPipeline
 import spaces
+from lib.file_utils import download_voice_files, ensure_dir
 
 class TTSModelV1:
     """KPipeline-based TTS model for v1.0.0"""
@@ -13,7 +14,8 @@ class TTSModelV1:
     def __init__(self):
         self.pipeline = None
         self.model_repo = "hexgrad/Kokoro-82M"
-        self.voices_dir = os.path.join(os.path.dirname(__file__), "reference", "reference_other_repo", "voices")
+        # Use v1 voices from Kokoro-82M repo
+        self.voices_dir = os.path.join(os.path.dirname(__file__), "voices")
         
     def initialize(self) -> bool:
         """Initialize KPipeline and verify voices"""
@@ -22,9 +24,11 @@ class TTSModelV1:
             
             self.pipeline = None # cannot be initialized outside of GPU decorator
             
-            # Verify voices directory exists
-            if not os.path.exists(self.voices_dir):
-                raise ValueError(f"Voice files not found at {self.voices_dir}")
+            # Download v1 voices if needed
+            ensure_dir(self.voices_dir)
+            if not os.path.exists(os.path.join(self.voices_dir, "voices")):
+                print("Downloading v1 voices...")
+                download_voice_files(self.model_repo, "voices", self.voices_dir)
 
             # Verify voices were downloaded successfully
             available_voices = self.list_voices()
@@ -43,8 +47,9 @@ class TTSModelV1:
     def list_voices(self) -> List[str]:
         """List available voices"""
         voices = []
-        if os.path.exists(self.voices_dir):
-            for file in os.listdir(self.voices_dir):
+        voices_dir = os.path.join(self.voices_dir, "voices")
+        if os.path.exists(voices_dir):
+            for file in os.listdir(voices_dir):
                 if file.endswith(".pt"):
                     voice_name = file[:-3]
                     voices.append(voice_name)
@@ -76,7 +81,7 @@ class TTSModelV1:
                 t_voices = []
                 for voice in voice_names:
                     try:
-                        voice_path = os.path.join(self.voices_dir, f"{voice}.pt")
+                        voice_path = os.path.join(self.voices_dir, "voices", f"{voice}.pt")
                         try:
                             voicepack = torch.load(voice_path, weights_only=True)
                         except Exception as e:
@@ -90,18 +95,16 @@ class TTSModelV1:
                 voicepack = torch.mean(torch.stack(t_voices), dim=0)
                 voice_name = "_".join(voice_names)
                 # Save mixed voice temporarily
-                mixed_voice_path = os.path.join(self.voices_dir, f"{voice_name}.pt")
+                mixed_voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
                 torch.save(voicepack, mixed_voice_path)
             else:
                 voice_name = voice_names[0]
-            
-            # Generate speech using KPipeline
-            generator = self.pipeline(
-                text,
-                voice=voice_name,
-                speed=speed,
-                split_pattern=r'\n+'  # Default chunking pattern
-            )
+                voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
+                try:
+                    voicepack = torch.load(voice_path, weights_only=True)
+                except Exception as e:
+                    print(f"Warning: weights_only load failed, attempting full load: {str(e)}")
+                    voicepack = torch.load(voice_path, weights_only=False)
             
             # Initialize tracking
             audio_chunks = []
@@ -114,7 +117,7 @@ class TTSModelV1:
                 text,
                 voice=voice_name,
                 speed=speed,
-                split_pattern=r'\n+'
+                split_pattern=r'\n+'  # Default chunking pattern
             )
             
             # Process chunks
