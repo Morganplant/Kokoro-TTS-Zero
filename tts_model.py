@@ -193,7 +193,11 @@ class TTSModel:
                     for voice in voice_names:
                         try:
                             voice_path = os.path.join(self.voices_dir, "voices", f"{voice}.pt")
-                            voicepack = torch.load(voice_path, weights_only=True)
+                            try:
+                                voicepack = torch.load(voice_path, weights_only=True)
+                            except Exception as e:
+                                print(f"Warning: weights_only load failed, attempting full load: {str(e)}")
+                                voicepack = torch.load(voice_path, weights_only=False)
                             t_voices.append(voicepack)
                         except Exception as e:
                             print(f"Warning: Failed to load voice {voice}: {str(e)}")
