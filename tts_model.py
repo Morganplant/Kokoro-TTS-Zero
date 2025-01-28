@@ -52,8 +52,8 @@ class TTSModel:
             )
             self.model_path = model_files[0]  # kokoro-v0_19.pth
             
-            # Download voice files
-            download_voice_files(self.model_repo, "voices", self.voices_dir)
+            # Download voice files from v0.19 directory
+            download_voice_files(self.model_repo, "v0.19/voices", self.voices_dir)
 
             # Verify voices were downloaded successfully
             available_voices = self.list_voices()
@@ -75,7 +75,7 @@ class TTSModel:
             voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
             if not os.path.exists(voice_path):
                 print(f"Downloading voice {voice_name}.pt...")
-                download_voice_files(self.model_repo, [f"{voice_name}.pt"], self.voices_dir)
+                download_voice_files(self.model_repo, [f"v0.19/voices/{voice_name}.pt"], self.voices_dir)
             return True
         except Exception as e:
             print(f"Error downloading voice {voice_name}: {str(e)}")
