@@ -10,3 +10,7 @@ tiktoken==0.8.0
 transformers==4.47.1
 munch==4.0.0
 matplotlib==3.4.3
+
+# v1.0.0 dependencies
+kokoro>=1.0.0
+misaki[en]>=0.1.0

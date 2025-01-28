@@ -9,13 +9,13 @@ from lib import format_audio_output
 from lib.ui_content import header_html, demo_text_info, styling
 from lib.book_utils import get_available_books, get_book_info, get_chapter_text
 from lib.text_utils import count_tokens
-from tts_model import TTSModel
+from tts_factory import TTSFactory
 
 # Set HF_HOME for faster restarts with cached models/voices
 os.environ["HF_HOME"] = "/data/.huggingface"
 
-# Create TTS model instance
-model = TTSModel()
+# Initialize model variable
+model = None
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -24,21 +24,24 @@ logging.getLogger('matplotlib').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 logger.debug("Starting app initialization...")
 
-model = TTSModel()
-
-def initialize_model():
+def initialize_model(version="v0.19"):
     """Initialize model and get voices"""
-    if model.model is None:
+    global model
+    try:
+        # Create model instance using factory
+        model = TTSFactory.create_model(version)
         if not model.initialize():
             raise gr.Error("Failed to initialize model")
-    
-    voices = model.list_voices()
-    if not voices:
-        raise gr.Error("No voices found. Please check the voices directory.")
         
-    default_voice = 'af_sky' if 'af_sky' in voices else voices[0] if voices else None
-    
-    return gr.update(choices=voices, value=default_voice)
+        voices = model.list_voices()
+        if not voices:
+            raise gr.Error("No voices found. Please check the voices directory.")
+            
+        default_voice = 'af_sky' if 'af_sky' in voices else voices[0] if voices else None
+        
+        return gr.update(choices=voices, value=default_voice)
+    except Exception as e:
+        raise gr.Error(f"Failed to initialize model: {str(e)}")
 
 def update_progress(chunk_num, total_chunks, tokens_per_sec, rtf, progress_state, start_time, gpu_timeout, progress):
     # Calculate time metrics
@@ -382,12 +385,29 @@ with gr.Blocks(title="Kokoro TTS Demo", css=styling) as demo:
             )
             
             with gr.Group():
+                version_dropdown = gr.Dropdown(
+                    label="Model Version",
+                    choices=["v0.19", "v1.0.0"],
+                    value="v0.19",
+                    allow_custom_value=False,
+                    multiselect=False
+                )
+                
                 voice_dropdown = gr.Dropdown(
                     label="Voice(s)",
                     choices=[],  # Start empty, will be populated after initialization
                     value=None,
                     allow_custom_value=True,
                     multiselect=True
+                )
+                
+                def on_version_change(version):
+                    return initialize_model(version)
+                
+                version_dropdown.change(
+                    fn=on_version_change,
+                    inputs=[version_dropdown],
+                    outputs=[voice_dropdown]
                 )
                 
                 speed_slider = gr.Slider(
@@ -436,9 +456,9 @@ with gr.Blocks(title="Kokoro TTS Demo", css=styling) as demo:
         with gr.Column():
             gr.Markdown(demo_text_info)
     
-    # Initialize voices on load
+    # Initialize voices on load with default version
     demo.load(
-        fn=initialize_model,
+        fn=lambda: initialize_model("v0.19"),
         outputs=[voice_dropdown]
     )
 

@@ -10,6 +10,7 @@ pinned: true
 short_description: Accelerated Text-To-Speech on Kokoro-82M
 models:
 - hexgrad/kLegacy
+- hexgrad/Kokoro-82M
 ---
 
 # Kokoro TTS Demo Space
