@@ -1,10 +1,8 @@
 import os
-import json
 import torch
 import numpy as np
 import time
 from typing import Tuple, List
-import soundfile as sf
 from kokoro import KPipeline
 import spaces
 
@@ -13,10 +11,7 @@ class TTSModelV1:
     
     def __init__(self):
         self.pipeline = None
-        # Load v1 voice mappings
-        voice_map_path = os.path.join(os.path.dirname(__file__), "voices", "v1_voices.json")
-        with open(voice_map_path) as f:
-            self.voice_map = json.load(f)
+        self.voices_dir = os.path.join(os.path.dirname(__file__), "voices_v1")
         
     def initialize(self) -> bool:
         """Initialize KPipeline"""
@@ -30,9 +25,14 @@ class TTSModelV1:
             return False
     
     def list_voices(self) -> List[str]:
-        """List available voices"""
-        # Return all voices from voice map
-        return self.voice_map["american"] + self.voice_map["british"]
+        """List available voices from voices_v1 directory"""
+        voices = []
+        if os.path.exists(self.voices_dir):
+            for file in os.listdir(self.voices_dir):
+                if file.endswith(".pt"):
+                    voice_name = file[:-3]
+                    voices.append(voice_name)
+        return sorted(voices)
         
     @spaces.GPU(duration=None)  # Duration will be set by the UI
     def generate_speech(self, text: str, voice_names: list[str], speed: float = 1.0, gpu_timeout: int = 60, progress_callback=None, progress_state=None, progress=None) -> Tuple[np.ndarray, float]:
