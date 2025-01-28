@@ -385,6 +385,28 @@ with gr.Blocks(title="Kokoro TTS Demo", css=styling) as demo:
             )
             
             with gr.Group():
+                gr.HTML("""
+                    <div style="
+                        text-align: center;
+                        margin-bottom: 10px;
+                        font-weight: bold;
+                        color: #05d9e8;
+                        text-shadow: 0 0 10px #05d9e8, 0 0 20px #05d9e8;
+                        animation: glow 2s ease-in-out infinite alternate;
+                    ">
+                        ✨ Now with V1.0.0 ✨
+                    </div>
+                    <style>
+                        @keyframes glow {
+                            from {
+                                text-shadow: 0 0 10px #05d9e8, 0 0 20px #05d9e8;
+                            }
+                            to {
+                                text-shadow: 0 0 15px #05d9e8, 0 0 30px #05d9e8, 0 0 40px #05d9e8;
+                            }
+                        }
+                    </style>
+                """)
                 version_dropdown = gr.Dropdown(
                     label="Model Version",
                     choices=["v0.19", "v1.0.0"],
