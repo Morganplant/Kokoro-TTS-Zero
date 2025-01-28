@@ -28,9 +28,9 @@ class TTSModel:
         ensure_dir(self.voices_dir)
         self.model_path = None
         
-        # Load required modules
+        # Load required modules from v0.19 directory
         py_modules = ["istftnet", "plbert", "models", "kokoro"]
-        module_files = download_model_files(self.model_repo, [f"{m}.py" for m in py_modules])
+        module_files = download_model_files(self.model_repo, [f"v0.19/{m}.py" for m in py_modules])
         
         for module_name, file_path in zip(py_modules, module_files):
             load_module_from_file(module_name, file_path)
@@ -48,7 +48,7 @@ class TTSModel:
             # Download model files
             model_files = download_model_files(
                 self.model_repo,
-                ["kokoro-v0_19.pth", "config.json"]
+                ["v0.19/kokoro-v0_19.pth", "v0.19/config.json"]
             )
             self.model_path = model_files[0]  # kokoro-v0_19.pth
             
