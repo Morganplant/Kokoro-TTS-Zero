@@ -4,12 +4,12 @@ emoji: 🎴
 colorFrom: gray
 colorTo: purple
 sdk: gradio
-sdk_version: 5.10.0
+sdk_version: 5.13.1
 app_file: app.py
 pinned: true
 short_description: Accelerated Text-To-Speech on Kokoro-82M
 models:
-- hexgrad/Kokoro-82M
+- hexgrad/kLegacy
 ---
 
 # Kokoro TTS Demo Space
