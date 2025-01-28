@@ -55,9 +55,13 @@ class TTSModel:
             # Download voice files
             download_voice_files(self.model_repo, "voices", self.voices_dir)
 
-            # Get list of available voices
+            # Verify voices were downloaded successfully
             available_voices = self.list_voices()
-
+            if not available_voices:
+                print("Warning: No voices found after initialization")
+            else:
+                print(f"Found {len(available_voices)} voices")
+            
             print("Model initialization complete")
             return True
             
@@ -208,7 +212,11 @@ class TTSModel:
                 else:
                     voice_name = voice_names[0]
                     voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
-                    voicepack = torch.load(voice_path, weights_only=True)
+                    try:
+                        voicepack = torch.load(voice_path, weights_only=True)
+                    except Exception as e:
+                        print(f"Warning: weights_only load failed, attempting full load: {str(e)}")
+                        voicepack = torch.load(voice_path, weights_only=False)
 
                 # Count tokens and normalize text
                 total_tokens = count_tokens(text)
