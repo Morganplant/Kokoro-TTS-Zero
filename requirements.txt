@@ -12,5 +12,5 @@ munch==4.0.0
 matplotlib==3.4.3
 
 # v1.0.0 dependencies
-kokoro>=1.0.0
-misaki[en]>=0.1.0
+kokoro>=0.2.1
+misaki[en]>=0.6.1
