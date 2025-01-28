@@ -52,8 +52,10 @@ class TTSModel:
             )
             self.model_path = model_files[0]  # kokoro-v0_19.pth
             
-            # Download voice files from v0.19 directory
-            download_voice_files(self.model_repo, "v0.19/voices", self.voices_dir)
+            # Verify local voice files are available
+            voices_dir = os.path.join(self.voices_dir, "voices")
+            if not os.path.exists(voices_dir):
+                raise ValueError("Voice files not found. Please run scripts/download_voices.py first")
 
             # Verify voices were downloaded successfully
             available_voices = self.list_voices()
@@ -70,16 +72,12 @@ class TTSModel:
             return False
     
     def ensure_voice_downloaded(self, voice_name: str) -> bool:
-        """Ensure specific voice is downloaded"""
-        try:
-            voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
-            if not os.path.exists(voice_path):
-                print(f"Downloading voice {voice_name}.pt...")
-                download_voice_files(self.model_repo, [f"v0.19/voices/{voice_name}.pt"], self.voices_dir)
-            return True
-        except Exception as e:
-            print(f"Error downloading voice {voice_name}: {str(e)}")
+        """Check if specific voice file exists locally"""
+        voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
+        if not os.path.exists(voice_path):
+            print(f"Voice file {voice_name}.pt not found. Please run scripts/download_voices.py first")
             return False
+        return True
 
     def list_voices(self) -> List[str]:
         """List available voices"""
