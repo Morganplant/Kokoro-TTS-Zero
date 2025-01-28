@@ -24,7 +24,7 @@ logging.getLogger('matplotlib').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 logger.debug("Starting app initialization...")
 
-def initialize_model(version="v0.19"):
+def initialize_model(version="v1.0.0"):
     """Initialize model and get voices"""
     global model
     try:
@@ -388,7 +388,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css=styling) as demo:
                 version_dropdown = gr.Dropdown(
                     label="Model Version",
                     choices=["v0.19", "v1.0.0"],
-                    value="v0.19",
+                    value="v1.0.0",
                     allow_custom_value=False,
                     multiselect=False
                 )
@@ -398,11 +398,15 @@ with gr.Blocks(title="Kokoro TTS Demo", css=styling) as demo:
                     choices=[],  # Start empty, will be populated after initialization
                     value=None,
                     allow_custom_value=True,
-                    multiselect=True
+                    multiselect=False  # Start with v1.0.0 which doesn't support multiselect
                 )
                 
                 def on_version_change(version):
-                    return initialize_model(version)
+                    voices = initialize_model(version)
+                    # Disable multiselect for v1.0.0 since it doesn't support voice mixing yet
+                    if version == "v1.0.0":
+                        return gr.update(choices=voices.choices, value=voices.value, multiselect=False)
+                    return gr.update(choices=voices.choices, value=voices.value, multiselect=True)
                 
                 version_dropdown.change(
                     fn=on_version_change,
@@ -458,7 +462,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css=styling) as demo:
     
     # Initialize voices on load with default version
     demo.load(
-        fn=lambda: initialize_model("v0.19"),
+        fn=lambda: initialize_model("v1.0.0"),
         outputs=[voice_dropdown]
     )
 

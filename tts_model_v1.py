@@ -73,7 +73,8 @@ class TTSModelV1:
                 text,
                 voice=voice_name,
                 speed=speed,
-                split_pattern=r'\n+'  # Default chunking pattern
+                split_pattern=r'\n\n+',  # Split on double newlines or more
+                preprocess_text=lambda t: t.replace('\n', ' ').replace('  ', ' ')  # Replace single newlines with spaces
             )
             
             # Process chunks

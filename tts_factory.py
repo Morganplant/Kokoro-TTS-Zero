@@ -5,7 +5,7 @@ class TTSFactory:
     """Factory class to create appropriate TTS model version"""
     
     @staticmethod
-    def create_model(version="v0.19"):
+    def create_model(version="v1.0.0"):
         """Create TTS model instance for specified version
         
         Args:
