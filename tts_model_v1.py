@@ -12,21 +12,19 @@ class TTSModelV1:
     
     def __init__(self):
         self.pipeline = None
-        self.voices_dir = "voices"
         self.model_repo = "hexgrad/Kokoro-82M"
+        self.voices_dir = os.path.join(os.path.dirname(__file__), "reference", "reference_other_repo", "voices")
         
     def initialize(self) -> bool:
         """Initialize KPipeline and verify voices"""
         try:
             print("Initializing v1.0.0 model...")
             
-            # Initialize KPipeline with American English
-            self.pipeline = None
+            self.pipeline = None # cannot be initialized outside of GPU decorator
             
-            # Verify local voice files are available
-            voices_dir = os.path.join(self.voices_dir, "voices")
-            if not os.path.exists(voices_dir):
-                raise ValueError("Voice files not found")
+            # Verify voices directory exists
+            if not os.path.exists(self.voices_dir):
+                raise ValueError(f"Voice files not found at {self.voices_dir}")
 
             # Verify voices were downloaded successfully
             available_voices = self.list_voices()
@@ -45,9 +43,8 @@ class TTSModelV1:
     def list_voices(self) -> List[str]:
         """List available voices"""
         voices = []
-        voices_subdir = os.path.join(self.voices_dir, "voices")
-        if os.path.exists(voices_subdir):
-            for file in os.listdir(voices_subdir):
+        if os.path.exists(self.voices_dir):
+            for file in os.listdir(self.voices_dir):
                 if file.endswith(".pt"):
                     voice_name = file[:-3]
                     voices.append(voice_name)
@@ -68,7 +65,8 @@ class TTSModelV1:
         try:
             start_time = time.time()
             if self.pipeline is None:
-                self.pipeline = KPipeline(lang_code='a')
+                lang_code = voice_names[0][0] if voice_names else 'a'
+                self.pipeline = KPipeline(lang_code=lang_code)
                 
             if not text or not voice_names:
                 raise ValueError("Text and voice name are required")
@@ -78,7 +76,7 @@ class TTSModelV1:
                 t_voices = []
                 for voice in voice_names:
                     try:
-                        voice_path = os.path.join(self.voices_dir, "voices", f"{voice}.pt")
+                        voice_path = os.path.join(self.voices_dir, f"{voice}.pt")
                         try:
                             voicepack = torch.load(voice_path, weights_only=True)
                         except Exception as e:
@@ -92,7 +90,7 @@ class TTSModelV1:
                 voicepack = torch.mean(torch.stack(t_voices), dim=0)
                 voice_name = "_".join(voice_names)
                 # Save mixed voice temporarily
-                mixed_voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
+                mixed_voice_path = os.path.join(self.voices_dir, f"{voice_name}.pt")
                 torch.save(voicepack, mixed_voice_path)
             else:
                 voice_name = voice_names[0]
@@ -105,41 +103,68 @@ class TTSModelV1:
                 split_pattern=r'\n+'  # Default chunking pattern
             )
             
-            # Process chunks and collect metrics
+            # Initialize tracking
             audio_chunks = []
             chunk_times = []
             chunk_sizes = []
             total_tokens = 0
             
+            # Get generator from pipeline
+            generator = self.pipeline(
+                text,
+                voice=voice_name,
+                speed=speed,
+                split_pattern=r'\n+'
+            )
+            
+            # Process chunks
             for i, (gs, ps, audio) in enumerate(generator):
                 chunk_start = time.time()
-                
-                # Store chunk audio
                 audio_chunks.append(audio)
                 
                 # Calculate metrics
                 chunk_time = time.time() - chunk_start
-                chunk_times.append(chunk_time)
-                chunk_sizes.append(len(gs))  # Use grapheme length as chunk size
+                chunk_tokens = len(gs)
+                total_tokens += chunk_tokens
                 
-                # Update progress if callback provided
-                if progress_callback:
-                    chunk_duration = len(audio) / 24000
-                    rtf = chunk_time / chunk_duration
+                # Calculate speed metrics
+                chunk_duration = len(audio) / 24000
+                rtf = chunk_time / chunk_duration
+                chunk_tokens_per_sec = chunk_tokens / chunk_time
+                
+                chunk_times.append(chunk_time)
+                chunk_sizes.append(len(gs))
+                
+                print(f"Chunk {i+1} processed in {chunk_time:.2f}s")
+                print(f"Current tokens/sec: {chunk_tokens_per_sec:.2f}")
+                print(f"Real-time factor: {rtf:.2f}x")
+                print(f"{(1/rtf):.1f}x faster than real-time")
+                
+                # Update progress
+                if progress_callback and progress_state:
+                    # Initialize lists if needed
+                    if "tokens_per_sec" not in progress_state:
+                        progress_state["tokens_per_sec"] = []
+                    if "rtf" not in progress_state:
+                        progress_state["rtf"] = []
+                    if "chunk_times" not in progress_state:
+                        progress_state["chunk_times"] = []
+                    
+                    # Update progress state
+                    progress_state["tokens_per_sec"].append(chunk_tokens_per_sec)
+                    progress_state["rtf"].append(rtf)
+                    progress_state["chunk_times"].append(chunk_time)
+                    
                     progress_callback(
                         i + 1,
-                        -1,  # Total chunks unknown with generator
-                        len(gs) / chunk_time,  # tokens/sec
+                        -1,  # Let UI handle total chunks
+                        chunk_tokens_per_sec,
                         rtf,
                         progress_state,
                         start_time,
                         gpu_timeout,
                         progress
                     )
-                
-                print(f"Chunk {i+1} processed in {chunk_time:.2f}s")
-                print(f"Graphemes: {gs}")
-                print(f"Phonemes: {ps}")
             
             # Concatenate audio chunks
             audio = np.concatenate(audio_chunks)
