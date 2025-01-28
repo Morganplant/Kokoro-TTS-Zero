@@ -7,7 +7,7 @@ sdk: gradio
 sdk_version: 5.13.1
 app_file: app.py
 pinned: true
-short_description: Accelerated Text-To-Speech on Kokoro-82M
+short_description: ✨[With v1.0.0] Accelerated TTS on Kokoro-82M
 models:
 - hexgrad/kLegacy
 - hexgrad/Kokoro-82M
