@@ -37,8 +37,12 @@ def initialize_model(version="v1.0.0"):
         if not voices:
             raise gr.Error("No voices found. Please check the voices directory.")
             
+        # For v0.19, return raw list of voices
+        if version == "v0.19":
+            return voices
+            
+        # For v1.0.0, return gr.update object
         default_voice = 'af_sky' if 'af_sky' in voices else voices[0] if voices else None
-        
         return gr.update(choices=voices, value=default_voice)
     except Exception as e:
         raise gr.Error(f"Failed to initialize model: {str(e)}")
@@ -425,10 +429,12 @@ with gr.Blocks(title="Kokoro TTS Demo", css=styling) as demo:
                 
                 def on_version_change(version):
                     voices = initialize_model(version)
-                    # Disable multiselect for v1.0.0 since it doesn't support voice mixing yet
+                    # For v1.0.0, voices is already a gr.update() object
                     if version == "v1.0.0":
                         return gr.update(choices=voices.choices, value=voices.value, multiselect=False)
-                    return gr.update(choices=voices.choices, value=voices.value, multiselect=True)
+                    # For v0.19, voices is a list of voice names
+                    default_voice = 'af_sky' if 'af_sky' in voices else voices[0] if voices else None
+                    return gr.update(choices=voices, value=default_voice, multiselect=True)
                 
                 version_dropdown.change(
                     fn=on_version_change,
