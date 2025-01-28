@@ -1,4 +1,5 @@
 import os
+import json
 import torch
 import numpy as np
 import time
@@ -6,54 +7,32 @@ from typing import Tuple, List
 import soundfile as sf
 from kokoro import KPipeline
 import spaces
-from lib.file_utils import download_voice_files, ensure_dir
 
 class TTSModelV1:
     """KPipeline-based TTS model for v1.0.0"""
     
     def __init__(self):
         self.pipeline = None
-        self.model_repo = "hexgrad/Kokoro-82M"
-        # Use v1 voices from Kokoro-82M repo
-        self.voices_dir = os.path.join(os.path.dirname(__file__), "voices")
+        # Load v1 voice mappings
+        voice_map_path = os.path.join(os.path.dirname(__file__), "voices", "v1_voices.json")
+        with open(voice_map_path) as f:
+            self.voice_map = json.load(f)
         
     def initialize(self) -> bool:
-        """Initialize KPipeline and verify voices"""
+        """Initialize KPipeline"""
         try:
             print("Initializing v1.0.0 model...")
-            
             self.pipeline = None # cannot be initialized outside of GPU decorator
-            
-            # Download v1 voices if needed
-            ensure_dir(self.voices_dir)
-            if not os.path.exists(os.path.join(self.voices_dir, "voices")):
-                print("Downloading v1 voices...")
-                download_voice_files(self.model_repo, "voices", self.voices_dir)
-
-            # Verify voices were downloaded successfully
-            available_voices = self.list_voices()
-            if not available_voices:
-                print("Warning: No voices found after initialization")
-            else:
-                print(f"Found {len(available_voices)} voices")
-            
             print("Model initialization complete")
             return True
-            
         except Exception as e:
             print(f"Error initializing model: {str(e)}")
             return False
     
     def list_voices(self) -> List[str]:
         """List available voices"""
-        voices = []
-        voices_dir = os.path.join(self.voices_dir, "voices")
-        if os.path.exists(voices_dir):
-            for file in os.listdir(voices_dir):
-                if file.endswith(".pt"):
-                    voice_name = file[:-3]
-                    voices.append(voice_name)
-        return voices
+        # Return all voices from voice map
+        return self.voice_map["american"] + self.voice_map["british"]
         
     @spaces.GPU(duration=None)  # Duration will be set by the UI
     def generate_speech(self, text: str, voice_names: list[str], speed: float = 1.0, gpu_timeout: int = 60, progress_callback=None, progress_state=None, progress=None) -> Tuple[np.ndarray, float]:
@@ -76,35 +55,12 @@ class TTSModelV1:
             if not text or not voice_names:
                 raise ValueError("Text and voice name are required")
             
-            # Handle voice mixing
+            # Handle voice selection
             if isinstance(voice_names, list) and len(voice_names) > 1:
-                t_voices = []
-                for voice in voice_names:
-                    try:
-                        voice_path = os.path.join(self.voices_dir, "voices", f"{voice}.pt")
-                        try:
-                            voicepack = torch.load(voice_path, weights_only=True)
-                        except Exception as e:
-                            print(f"Warning: weights_only load failed, attempting full load: {str(e)}")
-                            voicepack = torch.load(voice_path, weights_only=False)
-                        t_voices.append(voicepack)
-                    except Exception as e:
-                        print(f"Warning: Failed to load voice {voice}: {str(e)}")
-                
-                # Combine voices by taking mean
-                voicepack = torch.mean(torch.stack(t_voices), dim=0)
+                # For multiple voices, join them with underscore
                 voice_name = "_".join(voice_names)
-                # Save mixed voice temporarily
-                mixed_voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
-                torch.save(voicepack, mixed_voice_path)
             else:
                 voice_name = voice_names[0]
-                voice_path = os.path.join(self.voices_dir, "voices", f"{voice_name}.pt")
-                try:
-                    voicepack = torch.load(voice_path, weights_only=True)
-                except Exception as e:
-                    print(f"Warning: weights_only load failed, attempting full load: {str(e)}")
-                    voicepack = torch.load(voice_path, weights_only=False)
             
             # Initialize tracking
             audio_chunks = []
@@ -172,12 +128,6 @@ class TTSModelV1:
             # Concatenate audio chunks
             audio = np.concatenate(audio_chunks)
             
-            # Cleanup temporary mixed voice if created
-            if len(voice_names) > 1:
-                try:
-                    os.remove(mixed_voice_path)
-                except:
-                    pass
             
             # Return audio and metrics
             return (
