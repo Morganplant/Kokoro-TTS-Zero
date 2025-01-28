@@ -24,7 +24,7 @@ class TTSModel:
     def __init__(self):
         self.model = None
         self.voices_dir = "voices"
-        self.model_repo = "hexgrad/Kokoro-82M"
+        self.model_repo = "hexgrad/kLegacy"
         ensure_dir(self.voices_dir)
         self.model_path = None
         
