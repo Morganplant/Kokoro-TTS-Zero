@@ -21,7 +21,7 @@ class TTSModelV1:
             print("Initializing v1.0.0 model...")
             
             # Initialize KPipeline with American English
-            self.pipeline = KPipeline(lang_code='a')
+            self.pipeline = None
             
             # Verify local voice files are available
             voices_dir = os.path.join(self.voices_dir, "voices")
@@ -67,7 +67,9 @@ class TTSModelV1:
         """
         try:
             start_time = time.time()
-            
+            if self.pipeline is None:
+                self.pipeline = KPipeline(lang_code='a')
+                
             if not text or not voice_names:
                 raise ValueError("Text and voice name are required")
             
