@@ -83,27 +83,35 @@ class TTSModelV1:
             )
             
             # Process chunks
+            total_duration = 0  # Total audio duration in seconds
+            total_process_time = 0  # Total processing time in seconds
+            
             for i, (gs, ps, audio) in enumerate(generator):
-                chunk_start = time.time()
+                chunk_process_time = time.time() - start_time - total_process_time
+                total_process_time += chunk_process_time
                 audio_chunks.append(audio)
                 
                 # Calculate metrics
-                chunk_time = time.time() - chunk_start
                 chunk_tokens = len(gs)
                 total_tokens += chunk_tokens
                 
+                # Calculate audio duration
+                chunk_duration = len(audio) / 24000  # Convert samples to seconds
+                total_duration += chunk_duration
+                
                 # Calculate speed metrics
-                chunk_duration = len(audio) / 24000
-                rtf = chunk_time / chunk_duration
-                chunk_tokens_per_sec = chunk_tokens / chunk_time
+                tokens_per_sec = chunk_tokens / chunk_duration  # Tokens per second of audio
+                rtf = chunk_process_time / chunk_duration  # Real-time factor
                 
-                chunk_times.append(chunk_time)
-                chunk_sizes.append(len(gs))
+                chunk_times.append(chunk_process_time)
+                chunk_sizes.append(chunk_tokens)
                 
-                print(f"Chunk {i+1} processed in {chunk_time:.2f}s")
-                print(f"Current tokens/sec: {chunk_tokens_per_sec:.2f}")
-                print(f"Real-time factor: {rtf:.2f}x")
-                print(f"{(1/rtf):.1f}x faster than real-time")
+                print(f"Chunk {i+1}:")
+                print(f"  Process time: {chunk_process_time:.2f}s")
+                print(f"  Audio duration: {chunk_duration:.2f}s")
+                print(f"  Tokens/sec: {tokens_per_sec:.1f}")
+                print(f"  Real-time factor: {rtf:.3f}")
+                print(f"  Speed: {(1/rtf):.1f}x real-time")
                 
                 # Update progress
                 if progress_callback and progress_state:
@@ -116,14 +124,14 @@ class TTSModelV1:
                         progress_state["chunk_times"] = []
                     
                     # Update progress state
-                    progress_state["tokens_per_sec"].append(chunk_tokens_per_sec)
+                    progress_state["tokens_per_sec"].append(tokens_per_sec)
                     progress_state["rtf"].append(rtf)
-                    progress_state["chunk_times"].append(chunk_time)
+                    progress_state["chunk_times"].append(chunk_process_time)
                     
                     progress_callback(
                         i + 1,
                         -1,  # Let UI handle total chunks
-                        chunk_tokens_per_sec,
+                        tokens_per_sec,
                         rtf,
                         progress_state,
                         start_time,
