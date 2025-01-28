@@ -388,7 +388,7 @@ with gr.Blocks(title="Kokoro TTS Demo", css=styling) as demo:
                 gr.HTML("""
                     <div style="
                         text-align: center;
-                        margin-bottom: 10px;
+                        margin-bottom: 2px;
                         font-weight: bold;
                         color: #05d9e8;
                         text-shadow: 0 0 10px #05d9e8, 0 0 20px #05d9e8;

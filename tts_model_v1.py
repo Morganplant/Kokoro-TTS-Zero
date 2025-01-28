@@ -68,13 +68,18 @@ class TTSModelV1:
             chunk_sizes = []
             total_tokens = 0
             
+            # Preprocess text - replace single newlines with spaces while preserving paragraphs
+            processed_text = '\n\n'.join(
+                paragraph.replace('\n', ' ').replace('  ', ' ').strip()
+                for paragraph in text.split('\n\n')
+            )
+            
             # Get generator from pipeline
             generator = self.pipeline(
-                text,
+                processed_text,
                 voice=voice_name,
                 speed=speed,
-                split_pattern=r'\n\n+',  # Split on double newlines or more
-                preprocess_text=lambda t: t.replace('\n', ' ').replace('  ', ' ')  # Replace single newlines with spaces
+                split_pattern=r'\n\n+'  # Split on double newlines or more
             )
             
             # Process chunks
