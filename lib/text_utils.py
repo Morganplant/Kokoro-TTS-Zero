@@ -7,7 +7,7 @@ def normalize_text(text: str) -> str:
     # Basic normalization - can be expanded based on needs
     return text.strip()
 
-def chunk_text(text: str, max_chars: int = 400) -> list[str]:
+def chunk_text(text: str, max_chars: int = 300) -> list[str]:
     """Break text into chunks at natural boundaries"""
     chunks = []
     current_chunk = ""
